@@ -19,11 +19,11 @@ A modular, interactive 3D navigation interface built using **Three.js** and **Re
 
 ---
 
-## 🖼 Demo
+<!-- ## 🖼 Demo
 
 https://user-your-demo-url-if-applicable.com
 
----
+--- -->
 
 ## 🛠 Installation
 
