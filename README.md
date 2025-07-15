@@ -23,7 +23,7 @@ A modular, interactive 3D navigation interface built using **Three.js** and **Re
 
 https://user-your-demo-url-if-applicable.com
 
---- -->
+---
 
 ## 🛠 Installation
 
@@ -32,3 +32,4 @@ git clone https://github.com/your-username/3d-cube-navigator.git
 cd 3d-cube-navigator
 pnpm install # or npm install
 pnpm dev     # or npm run dev
+ -->
