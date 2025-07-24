@@ -215,6 +215,7 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
         .start();
     }
 
+    unfoldProgress.current = unfoldProgress.current.map(() => 0);
     setCurrentFaceIndex(index);
   };
 
@@ -269,26 +270,26 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
 
     useFrame(() => {
       TWEEN.update();
-      const groupQ = groupRef.current?.quaternion.clone();
       facesRef.current.forEach((face, idx) => {
-        if (!face || !groupQ) return;
+        if (!face) return;
         const progress = unfoldProgress.current[idx];
         const config = unfoldConfigs[`${currentFaceIndex}-${idx}`];
         if (progress > 0 && config) {
           const { pivot, axis } = config;
-          const pivotVec = new THREE.Vector3(...pivot).applyQuaternion(groupQ);
-          const axisVec = new THREE.Vector3(...axis).applyQuaternion(groupQ);
+          const pivotVec = new THREE.Vector3(...pivot);
+          const axisVec = new THREE.Vector3(...axis);
           const angle = -(Math.PI / 2) * progress;
           const R = new THREE.Matrix4().makeRotationAxis(axisVec, angle);
           const T = new THREE.Matrix4().makeTranslation(pivotVec.x, pivotVec.y, pivotVec.z);
           const Ti = new THREE.Matrix4().makeTranslation(-pivotVec.x, -pivotVec.y, -pivotVec.z);
           const mat = T.multiply(R).multiply(Ti);
-          if (face.originalMatrix)
+          if (face.originalMatrix) {
             face.matrix.copy(face.originalMatrix).premultiply(mat);
+            face.matrix.decompose(face.position, face.quaternion, face.scale);
+          }
+        } else if (face.originalMatrix) {
+          face.matrix.copy(face.originalMatrix);
           face.matrix.decompose(face.position, face.quaternion, face.scale);
-        } else if (face.originalPosition && face.originalRotation) {
-          face.position.copy(face.originalPosition);
-          face.quaternion.copy(face.originalRotation);
         }
       });
     });
