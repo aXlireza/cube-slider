@@ -112,7 +112,10 @@ export default function SmoothCube() {
   const unfoldConfigs = useMemo(() => getUnfoldConfigs(SIZE), []);
 
   const [currentFaceIndex, setCurrentFaceIndex] = useState(0);
-  const [history, setHistory] = useState<number[]>([0]);
+  interface HistEntry { index: number; complex: boolean }
+  const [history, setHistory] = useState<HistEntry[]>([
+    { index: 0, complex: false },
+  ]);
 
   const rotateToFace = (index: number, complex: boolean) => {
     const group = groupRef.current!;
@@ -156,11 +159,23 @@ export default function SmoothCube() {
         })
         .start();
     } else {
-      new TWEEN.Tween({ t: 0 })
-        .to({ t: 1 }, 800)
+      new TWEEN.Tween(camera.position)
+        .to(zoomOut, 400)
         .easing(TWEEN.Easing.Quadratic.InOut)
-        .onUpdate(({ t }) => {
-          group.quaternion.slerpQuaternions(startQ, endQ, t);
+        .onComplete(() => {
+          new TWEEN.Tween({ t: 0 })
+            .to({ t: 1 }, 800)
+            .easing(TWEEN.Easing.Quadratic.InOut)
+            .onUpdate(({ t }) => {
+              group.quaternion.slerpQuaternions(startQ, endQ, t);
+            })
+            .onComplete(() => {
+              new TWEEN.Tween(camera.position)
+                .to(startPosition, 400)
+                .easing(TWEEN.Easing.Quadratic.InOut)
+                .start();
+            })
+            .start();
         })
         .start();
     }
@@ -170,23 +185,24 @@ export default function SmoothCube() {
 
   const simpleNext = () => {
     const next = (currentFaceIndex + 1) % 6;
-    setHistory((h) => [...h, next]);
+    setHistory((h) => [...h, { index: next, complex: false }]);
     rotateToFace(next, false);
   };
 
   const complexNext = () => {
     let next = Math.floor(Math.random() * 6);
     if (next === currentFaceIndex) next = (next + 1) % 6;
-    setHistory((h) => [...h, next]);
+    setHistory((h) => [...h, { index: next, complex: true }]);
     rotateToFace(next, true);
   };
 
   const goBack = () => {
     setHistory((h) => {
       if (h.length <= 1) return h;
+      const last = h[h.length - 1];
       const newHist = h.slice(0, -1);
-      const idx = newHist[newHist.length - 1];
-      rotateToFace(idx, false);
+      const prev = newHist[newHist.length - 1];
+      rotateToFace(prev.index, last.complex);
       return newHist;
     });
   };
