@@ -137,8 +137,9 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
   ]);
 
   const rotateToFace = (index: number, complex: boolean) => {
-    const group = groupRef.current!;
-    const camera = cameraRef.current!;
+    const group = groupRef.current;
+    const camera = cameraRef.current;
+    if (!group || !camera) return;
     const startPosition = camera.position.clone();
     const zoomOut = startPosition.clone().multiplyScalar(1.5);
     const startQ = group.quaternion.clone();
@@ -253,16 +254,19 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
 
     useFrame(() => {
       TWEEN.update();
+      const groupQ = groupRef.current?.quaternion.clone();
       facesRef.current.forEach((face, idx) => {
-        if (!face) return;
+        if (!face || !groupQ) return;
         const progress = unfoldProgress.current[idx];
         const config = unfoldConfigs[`${currentFaceIndex}-${idx}`];
         if (progress > 0 && config) {
           const { pivot, axis } = config;
+          const pivotVec = new THREE.Vector3(...pivot).applyQuaternion(groupQ);
+          const axisVec = new THREE.Vector3(...axis).applyQuaternion(groupQ);
           const angle = -(Math.PI / 2) * progress;
-          const R = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(...axis), angle);
-          const T = new THREE.Matrix4().makeTranslation(...pivot);
-          const Ti = new THREE.Matrix4().makeTranslation(-pivot[0], -pivot[1], -pivot[2]);
+          const R = new THREE.Matrix4().makeRotationAxis(axisVec, angle);
+          const T = new THREE.Matrix4().makeTranslation(pivotVec.x, pivotVec.y, pivotVec.z);
+          const Ti = new THREE.Matrix4().makeTranslation(-pivotVec.x, -pivotVec.y, -pivotVec.z);
           const mat = T.multiply(R).multiply(Ti);
           face.matrix.copy((face as any).originalMatrix).premultiply(mat);
           face.matrix.decompose(face.position, face.quaternion, face.scale);
