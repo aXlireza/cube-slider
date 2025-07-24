@@ -1,216 +1,172 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import TWEEN from '@tweenjs/tween.js';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Html } from '@react-three/drei';
 
 export default function CubeExperiment() {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const facesRef = useRef<THREE.Mesh[]>([]);
-  const groupRef = useRef<THREE.Group>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [faceHistory, setFaceHistory] = useState<number[]>([4]); // Start on front face
+  const groupRef = useRef(null);
+  const cameraRef = useRef(null);
+  const facesRef = useRef([]);
+  const [currentFaceIndex, setCurrentFaceIndex] = useState(0); // Tracks current face (0-5)
+  const unfoldProgress = useRef(new Array(6).fill(0)); // Unfolding state per face
 
-  const cubeSize = 2;
-
-  const faceRotations = [
-    new THREE.Euler(0, -Math.PI / 2, 0), // Right
-    new THREE.Euler(0, Math.PI / 2, 0),  // Left
-    new THREE.Euler(Math.PI / 2, 0, 0),  // Top
-    new THREE.Euler(-Math.PI / 2, 0, 0), // Bottom
-    new THREE.Euler(0, 0, 0),            // Front
-    new THREE.Euler(0, Math.PI, 0),      // Back
+  // Face definitions: position, rotation, and content identifier
+  const faceData = [
+    { position: [0, 0, 1], rotation: [0, 0, 0], label: 'Front' }, // 0
+    { position: [1, 0, 0], rotation: [0, Math.PI / 2, 0], label: 'Right' }, // 1
+    { position: [0, 0, -1], rotation: [0, Math.PI, 0], label: 'Back' }, // 2
+    { position: [-1, 0, 0], rotation: [0, -Math.PI / 2, 0], label: 'Left' }, // 3
+    { position: [0, 1, 0], rotation: [-Math.PI / 2, 0, 0], label: 'Top' }, // 4
+    { position: [0, -1, 0], rotation: [Math.PI / 2, 0, 0], label: 'Bottom' }, // 5
   ];
 
-  const unfoldConfigs: Record<string, { pivot: number[]; axis: number[] }> = {
-    '4-3': { pivot: [0, -cubeSize / 2, cubeSize / 2], axis: [1, 0, 0] }, // Front → Bottom
-    '4-0': { pivot: [cubeSize / 2, 0, cubeSize / 2], axis: [0, 1, 0] },  // Front → Right
-    '0-2': { pivot: [cubeSize / 2, cubeSize / 2, 0], axis: [0, 0, 1] },  // Right → Top
-    '0-3': { pivot: [cubeSize / 2, -cubeSize / 2, 0], axis: [0, 0, 1] }, // Right → Bottom
-    '1-2': { pivot: [-cubeSize / 2, cubeSize / 2, 0], axis: [0, 0, 1] }, // Left → Top
-    '1-3': { pivot: [-cubeSize / 2, -cubeSize / 2, 0], axis: [0, 0, 1] }, // Left → Bottom
-    '5-3': { pivot: [0, -cubeSize / 2, -cubeSize / 2], axis: [1, 0, 0] }, // Back → Bottom
-    '5-0': { pivot: [cubeSize / 2, 0, -cubeSize / 2], axis: [0, 1, 0] },  // Back → Right
+  // Target rotations to bring each face to the front
+  const targetRotations = {
+    0: [0, 0, 0], // Front
+    1: [0, -Math.PI / 2, 0], // Right
+    2: [0, Math.PI, 0], // Back
+    3: [0, Math.PI / 2, 0], // Left
+    4: [Math.PI / 2, 0, 0], // Top
+    5: [-Math.PI / 2, 0, 0], // Bottom
   };
 
-  const rotateToFace = async (index: number) => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-
-    const camera = cameraRef.current!;
-    const group = groupRef.current!;
-    const startRot = group.rotation.clone();
-    const targetRot = faceRotations[index];
-
-    return new Promise<void>((resolve) => {
-      new TWEEN.Tween(camera.position)
-        .to({ z: 10 }, 400)
-        .easing(TWEEN.Easing.Quadratic.Out)
-        .start();
-
-      new TWEEN.Tween(startRot)
-        .to({ x: targetRot.x, y: targetRot.y, z: targetRot.z }, 800)
-        .easing(TWEEN.Easing.Quadratic.InOut)
-        .onUpdate(() => {
-          group.rotation.set(startRot.x, startRot.y, startRot.z);
-        })
-        .onComplete(() => {
-          new TWEEN.Tween(camera.position)
-            .to({ z: 6 }, 400)
-            .easing(TWEEN.Easing.Quadratic.In)
-            .onComplete(() => {
-              setFaceHistory((prev) => [...prev, index]);
-              setIsAnimating(false);
-              resolve();
-            })
-            .start();
-        })
-        .start();
-    });
+  // Adjacency mapping for bottom (south) and right (east) faces
+  const adjacencies = {
+    0: { south: 5, east: 1 }, // Front: Bottom, Right
+    1: { south: 5, east: 2 }, // Right: Bottom, Back
+    2: { south: 5, east: 3 }, // Back: Bottom, Left
+    3: { south: 5, east: 0 }, // Left: Bottom, Front
+    4: { south: 0, east: 1 }, // Top: Front, Right
+    5: { south: 2, east: 1 }, // Bottom: Back, Right
   };
 
-  const unfoldFace = (baseIndex: number, targetIndex: number) => {
-  if (isAnimating) return;
-  const face = facesRef.current[targetIndex];
-  if (!face) return;
-
-  const config = unfoldConfigs[`${baseIndex}-${targetIndex}`];
-  if (!config) return;
-
-  const { pivot, axis } = config;
-  const p = new THREE.Vector3(...pivot);
-  const d = new THREE.Vector3(...axis).normalize();
-
-  // 🔄 Track fold state
-  const isCurrentlyFolded = face.userData.folded !== false;
-  const startTheta = isCurrentlyFolded ? 0 : Math.PI / 2;
-  const endTheta = isCurrentlyFolded ? Math.PI / 2 : 0;
-
-  face.updateMatrix();
-  const originalMatrix = face.matrix.clone();
-
-  setIsAnimating(true);
-  new TWEEN.Tween({ theta: startTheta })
-    .to({ theta: endTheta }, 1000)
-    .easing(TWEEN.Easing.Quadratic.InOut)
-    .onUpdate(({ theta }) => {
-      const R = new THREE.Matrix4().makeRotationAxis(d, theta);
-      const T = new THREE.Matrix4().makeTranslation(p.x, p.y, p.z);
-      const Tinv = new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z);
-      const transform = T.multiply(R).multiply(Tinv);
-
-      const result = originalMatrix.clone().premultiply(transform);
-      face.matrix.copy(result);
-      face.matrix.decompose(face.position, face.quaternion, face.scale);
-    })
-    .onComplete(() => {
-      face.userData.folded = !isCurrentlyFolded;
-      setIsAnimating(false);
-    })
-    .start();
+  // Unfolding configurations: pivot point and rotation axis for each base-adjacent pair
+  const unfoldConfigs = {
+    '0-5': { pivot: [0, -1, 1], axis: [1, 0, 0] }, // Front to Bottom
+    '0-1': { pivot: [1, 0, 1], axis: [0, 1, 0] }, // Front to Right
+    '1-5': { pivot: [1, -1, 0], axis: [0, 0, 1] }, // Right to Bottom
+    '1-2': { pivot: [1, 0, -1], axis: [0, 1, 0] }, // Right to Back
+    '2-5': { pivot: [0, -1, -1], axis: [1, 0, 0] }, // Back to Bottom
+    '2-3': { pivot: [-1, 0, -1], axis: [0, 1, 0] }, // Back to Left
+    '3-5': { pivot: [-1, -1, 0], axis: [0, 0, 1] }, // Left to Bottom
+    '3-0': { pivot: [-1, 0, 1], axis: [0, 1, 0] }, // Left to Front
+    '4-0': { pivot: [0, 1, 1], axis: [1, 0, 0] }, // Top to Front
+    '4-1': { pivot: [1, 1, 0], axis: [0, 0, 1] }, // Top to Right
+    '5-2': { pivot: [0, -1, -1], axis: [1, 0, 0] }, // Bottom to Back
+    '5-1': { pivot: [1, -1, 0], axis: [0, 0, 1] }, // Bottom to Right
   };
 
-
-
-  const handleUnfold = (direction: 'bottom' | 'right') => {
-    debugger
-    const currentFace = faceHistory[faceHistory.length - 1];
-    const targetMap: Record<number, Record<'bottom' | 'right', number>> = {
-      4: { bottom: 3, right: 0 },
-      0: { bottom: 3, right: 2 },
-      1: { bottom: 3, right: 2 },
-      5: { bottom: 3, right: 0 },
-    };
-
-    const target = targetMap[currentFace]?.[direction];
-    if (typeof target === 'number') {
-      unfoldFace(currentFace, target);
-    }
-  };
-
-  const goBack = () => {
-    if (isAnimating || faceHistory.length < 2) return;
-    const prev = [...faceHistory];
-    prev.pop();
-    const last = prev[prev.length - 1];
-    setFaceHistory(prev);
-    rotateToFace(last);
-  };
-
-  const goForward = () => {
-    const next = (faceHistory.at(-1)! + 1) % 6;
-    rotateToFace(next);
-  };
-
+  // Store original face transforms
   useEffect(() => {
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 6;
-    cameraRef.current = camera;
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    mountRef.current!.appendChild(renderer.domElement);
-
-    const group = new THREE.Group();
-    groupRef.current = group;
-    scene.add(group);
-
-    const geometry = new THREE.PlaneGeometry(cubeSize, cubeSize);
-    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
-
-    const positions = [
-      [cubeSize / 2, 0, 0],   // Right
-      [-cubeSize / 2, 0, 0],  // Left
-      [0, cubeSize / 2, 0],   // Top
-      [0, -cubeSize / 2, 0],  // Bottom
-      [0, 0, cubeSize / 2],   // Front
-      [0, 0, -cubeSize / 2],  // Back
-    ];
-
-    const rotations = [
-      [0, Math.PI / 2, 0],  // Right
-      [0, -Math.PI / 2, 0], // Left
-      [-Math.PI / 2, 0, 0], // Top
-      [Math.PI / 2, 0, 0],  // Bottom
-      [0, 0, 0],            // Front
-      [0, Math.PI, 0],      // Back
-    ];
-
-    for (let i = 0; i < 6; i++) {
-      const mat = new THREE.MeshBasicMaterial({ color: colors[i], side: THREE.DoubleSide });
-      const mesh = new THREE.Mesh(geometry, mat);
-      mesh.position.set(...positions[i]);
-      mesh.rotation.set(...rotations[i]);
-      mesh.userData = { folded: true };
-      mesh.matrixAutoUpdate = false;
-      mesh.updateMatrix();
-      group.add(mesh);
-      facesRef.current.push(mesh);
-    }
-
-    const animate = () => {
-      requestAnimationFrame(animate);
-      TWEEN.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    return () => {
-      mountRef.current?.removeChild(renderer.domElement);
-    };
+    facesRef.current.forEach((face) => {
+      if (face) {
+        face.originalPosition = face.position.clone();
+        face.originalRotation = face.rotation.clone();
+        face.originalMatrix = face.matrix.clone();
+      }
+    });
   }, []);
 
+  // Creative navigation: zoom out, rotate, zoom in
+  const navigate = (direction) => {
+    const totalFaces = 6;
+    const newIndex = (currentFaceIndex + direction + totalFaces) % totalFaces;
+    setCurrentFaceIndex(newIndex);
+
+    const group = groupRef.current;
+    const camera = cameraRef.current;
+    const startPosition = camera.position.clone();
+    const zoomOutPosition = startPosition.clone().multiplyScalar(1.5); // Zoom out by 50%
+    const startQuaternion = group.quaternion.clone();
+    const targetRotation = targetRotations[newIndex];
+    const endQuaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(...targetRotation));
+
+    // Zoom out
+    new TWEEN.Tween(camera.position)
+      .to(zoomOutPosition, 500)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .start()
+      .onComplete(() => {
+        // Rotate cube
+        new TWEEN.Tween({ t: 0 })
+          .to({ t: 1 }, 1000)
+          .easing(TWEEN.Easing.Quadratic.InOut)
+          .onUpdate(({ t }) => {
+            group.quaternion.slerpQuaternions(startQuaternion, endQuaternion, t);
+          })
+          .start()
+          .onComplete(() => {
+            // Zoom in
+            new TWEEN.Tween(camera.position)
+              .to(startPosition, 500)
+              .easing(TWEEN.Easing.Quadratic.InOut)
+              .start();
+          });
+      });
+  };
+
+  // Toggle unfolding of bottom or right face
+  const toggleUnfold = (direction) => {
+    const adjacentIndex = adjacencies[currentFaceIndex][direction];
+    if (adjacentIndex === undefined) return;
+
+    const currentProgress = unfoldProgress.current[adjacentIndex];
+    const targetProgress = currentProgress > 0 ? 0 : 1;
+
+    new TWEEN.Tween({ progress: currentProgress })
+      .to({ progress: targetProgress }, 1000)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .onUpdate(({ progress }) => {
+        unfoldProgress.current[adjacentIndex] = progress;
+      })
+      .start();
+  };
+
+  // Apply unfolding transformations
+  useFrame(() => {
+    TWEEN.update();
+    facesRef.current.forEach((face, index) => {
+      if (!face) return;
+      const progress = unfoldProgress.current[index];
+      const config = unfoldConfigs[`${currentFaceIndex}-${index}`];
+      if (progress > 0 && config) {
+        const { pivot, axis } = config;
+        const angle = (Math.PI / 2) * progress;
+        const R = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(...axis), angle);
+        const T = new THREE.Matrix4().makeTranslation(...pivot);
+        const Tinv = new THREE.Matrix4().makeTranslation(-pivot[0], -pivot[1], -pivot[2]);
+        const unfoldingMatrix = T.multiply(R).multiply(Tinv);
+        face.matrix.copy(face.originalMatrix).premultiply(unfoldingMatrix);
+        face.matrix.decompose(face.position, face.quaternion, face.scale);
+      } else {
+        face.position.copy(face.originalPosition);
+        face.quaternion.copy(face.originalRotation);
+      }
+    });
+  });
+
   return (
-    <div className="relative w-screen h-screen bg-black">
-      <div ref={mountRef} className="w-full h-full" />
-      <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-        <button onClick={goBack} disabled={isAnimating} className="px-4 py-2 bg-gray-700 text-white rounded">◀ Back</button>
-        <button onClick={goForward} disabled={isAnimating} className="px-4 py-2 bg-gray-700 text-white rounded">▶ Forward</button>
-        <button onClick={() => handleUnfold('bottom')} disabled={isAnimating} className="px-4 py-2 bg-blue-700 text-white rounded">Unfold Bottom</button>
-        <button onClick={() => handleUnfold('right')} disabled={isAnimating} className="px-4 py-2 bg-green-700 text-white rounded">Unfold Right</button>
-      </div>
+    <div className="relative w-screen h-screen bg-gray-100">
+      <Canvas camera={{ position: [0, 0, 5], fov: 50 }} onCreated={({ camera }) => (cameraRef.current = camera)}>
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} intensity={1} />
+        <group ref={groupRef}>
+          {faceData.map((data, index) => (
+            <CubeFace
+              key={index}
+              position={data.position}
+              rotation={data.rotation}
+              content={data.label}
+              ref={(el) => (facesRef.current[index] = el)}
+            />
+          ))}
+        </group>
+        <OrbitControls enableZoom={false} enablePan={false} />
+      </Canvas>
+      <ControlPanel onNavigate={navigate} onUnfold={toggleUnfold} />
     </div>
   );
 }
