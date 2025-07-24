@@ -140,6 +140,8 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
     const group = groupRef.current;
     const camera = cameraRef.current;
     if (!group || !camera) return;
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
     const startPosition = camera.position.clone();
     const zoomOut = startPosition.clone().multiplyScalar(1.5);
     const startQ = group.quaternion.clone();
@@ -153,12 +155,14 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
       new TWEEN.Tween(camera.position)
         .to(zoomOut, 400)
         .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(() => camera.lookAt(0, 0, 0))
         .onComplete(() => {
           new TWEEN.Tween({ t: 0 })
             .to({ t: 1 }, 1000)
             .easing(TWEEN.Easing.Quadratic.InOut)
             .onUpdate(({ t }) => {
               group.quaternion.slerpQuaternions(startQ, randomQ, t);
+              camera.lookAt(0, 0, 0);
             })
             .onComplete(() => {
               new TWEEN.Tween({ t: 0 })
@@ -166,11 +170,13 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
                 .easing(TWEEN.Easing.Quadratic.InOut)
                 .onUpdate(({ t }) => {
                   group.quaternion.slerpQuaternions(randomQ, endQ, t);
+                  camera.lookAt(0, 0, 0);
                 })
                 .onComplete(() => {
                   new TWEEN.Tween(camera.position)
                     .to(startPosition, 400)
                     .easing(TWEEN.Easing.Quadratic.InOut)
+                    .onUpdate(() => camera.lookAt(0, 0, 0))
                     .start();
                 })
                 .start();
@@ -182,17 +188,20 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
       new TWEEN.Tween(camera.position)
         .to(zoomOut, 400)
         .easing(TWEEN.Easing.Quadratic.InOut)
+        .onUpdate(() => camera.lookAt(0, 0, 0))
         .onComplete(() => {
           new TWEEN.Tween({ t: 0 })
             .to({ t: 1 }, 800)
             .easing(TWEEN.Easing.Quadratic.InOut)
             .onUpdate(({ t }) => {
               group.quaternion.slerpQuaternions(startQ, endQ, t);
+              camera.lookAt(0, 0, 0);
             })
             .onComplete(() => {
               new TWEEN.Tween(camera.position)
                 .to(startPosition, 400)
                 .easing(TWEEN.Easing.Quadratic.InOut)
+                .onUpdate(() => camera.lookAt(0, 0, 0))
                 .start();
             })
             .start();
