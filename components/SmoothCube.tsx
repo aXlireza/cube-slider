@@ -259,7 +259,7 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
         const config = unfoldConfigs[`${currentFaceIndex}-${idx}`];
         if (progress > 0 && config) {
           const { pivot, axis } = config;
-          const angle = (Math.PI / 2) * progress;
+          const angle = -(Math.PI / 2) * progress;
           const R = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(...axis), angle);
           const T = new THREE.Matrix4().makeTranslation(...pivot);
           const Ti = new THREE.Matrix4().makeTranslation(-pivot[0], -pivot[1], -pivot[2]);
