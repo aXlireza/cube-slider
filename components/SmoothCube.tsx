@@ -13,6 +13,12 @@ import {
   ReactNode,
 } from 'react';
 
+interface ExtendedMesh extends THREE.Mesh {
+  originalPosition?: THREE.Vector3;
+  originalRotation?: THREE.Quaternion;
+  originalMatrix?: THREE.Matrix4;
+}
+
 const SIZE = 2;
 
 export interface FaceConfig {
@@ -73,10 +79,10 @@ function getUnfoldConfigs(size: number) {
 
 const CubeFace = forwardRef<
   THREE.Mesh,
-  { position: number[]; rotation: number[]; content?: ReactNode; color: string }
->(
+  { position: [number, number, number]; rotation: [number, number, number]; content?: ReactNode; color: string }
+>( 
   ({ position, rotation, content, color }, ref) => (
-    <mesh position={position as any} rotation={rotation as any} ref={ref as any}>
+    <mesh position={position} rotation={rotation} ref={ref}>
       <planeGeometry args={[SIZE, SIZE]} />
       <meshStandardMaterial color={color} side={THREE.DoubleSide} />
       <Html center distanceFactor={1.1} wrapperClass="pointer-events-none">
@@ -126,7 +132,7 @@ function ControlPanel({
 export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfig[] }) {
   const groupRef = useRef<THREE.Group>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
-  const facesRef = useRef<THREE.Mesh[]>([]);
+  const facesRef = useRef<ExtendedMesh[]>([]);
   const unfoldProgress = useRef<number[]>(new Array(6).fill(0));
   const unfoldConfigs = useMemo(() => getUnfoldConfigs(SIZE), []);
 
@@ -254,9 +260,9 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
     useEffect(() => {
       facesRef.current.forEach((face) => {
         if (face) {
-          (face as any).originalPosition = face.position.clone();
-          (face as any).originalRotation = face.quaternion.clone();
-          (face as any).originalMatrix = face.matrix.clone();
+          face.originalPosition = face.position.clone();
+          face.originalRotation = face.quaternion.clone();
+          face.originalMatrix = face.matrix.clone();
         }
       });
     }, []);
@@ -277,11 +283,12 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
           const T = new THREE.Matrix4().makeTranslation(pivotVec.x, pivotVec.y, pivotVec.z);
           const Ti = new THREE.Matrix4().makeTranslation(-pivotVec.x, -pivotVec.y, -pivotVec.z);
           const mat = T.multiply(R).multiply(Ti);
-          face.matrix.copy((face as any).originalMatrix).premultiply(mat);
+          if (face.originalMatrix)
+            face.matrix.copy(face.originalMatrix).premultiply(mat);
           face.matrix.decompose(face.position, face.quaternion, face.scale);
-        } else if ((face as any).originalPosition) {
-          face.position.copy((face as any).originalPosition);
-          face.quaternion.copy((face as any).originalRotation);
+        } else if (face.originalPosition && face.originalRotation) {
+          face.position.copy(face.originalPosition);
+          face.quaternion.copy(face.originalRotation);
         }
       });
     });
@@ -298,7 +305,9 @@ export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfi
               rotation={data.rotation}
               content={data.content}
               color={data.color ?? faceColors[idx]}
-              ref={(el) => (facesRef.current[idx] = el!)}
+              ref={(el) => {
+                if (el) facesRef.current[idx] = el as ExtendedMesh;
+              }}
             />
           ))}
         </group>
