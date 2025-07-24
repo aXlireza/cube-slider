@@ -199,44 +199,41 @@ export default function SmoothCube() {
       .start();
   };
 
-  useEffect(() => {
-    facesRef.current.forEach((face) => {
-      if (face) {
-        (face as any).originalPosition = face.position.clone();
-        (face as any).originalRotation = face.quaternion.clone();
-        (face as any).originalMatrix = face.matrix.clone();
-      }
-    });
-  }, []);
+  const Scene = () => {
+    useEffect(() => {
+      facesRef.current.forEach((face) => {
+        if (face) {
+          (face as any).originalPosition = face.position.clone();
+          (face as any).originalRotation = face.quaternion.clone();
+          (face as any).originalMatrix = face.matrix.clone();
+        }
+      });
+    }, []);
 
-  useFrame(() => {
-    TWEEN.update();
-    facesRef.current.forEach((face, idx) => {
-      if (!face) return;
-      const progress = unfoldProgress.current[idx];
-      const config = unfoldConfigs[`${currentFaceIndex}-${idx}`];
-      if (progress > 0 && config) {
-        const { pivot, axis } = config;
-        const angle = (Math.PI / 2) * progress;
-        const R = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(...axis), angle);
-        const T = new THREE.Matrix4().makeTranslation(...pivot);
-        const Ti = new THREE.Matrix4().makeTranslation(-pivot[0], -pivot[1], -pivot[2]);
-        const mat = T.multiply(R).multiply(Ti);
-        face.matrix.copy((face as any).originalMatrix).premultiply(mat);
-        face.matrix.decompose(face.position, face.quaternion, face.scale);
-      } else if ((face as any).originalPosition) {
-        face.position.copy((face as any).originalPosition);
-        face.quaternion.copy((face as any).originalRotation);
-      }
+    useFrame(() => {
+      TWEEN.update();
+      facesRef.current.forEach((face, idx) => {
+        if (!face) return;
+        const progress = unfoldProgress.current[idx];
+        const config = unfoldConfigs[`${currentFaceIndex}-${idx}`];
+        if (progress > 0 && config) {
+          const { pivot, axis } = config;
+          const angle = (Math.PI / 2) * progress;
+          const R = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(...axis), angle);
+          const T = new THREE.Matrix4().makeTranslation(...pivot);
+          const Ti = new THREE.Matrix4().makeTranslation(-pivot[0], -pivot[1], -pivot[2]);
+          const mat = T.multiply(R).multiply(Ti);
+          face.matrix.copy((face as any).originalMatrix).premultiply(mat);
+          face.matrix.decompose(face.position, face.quaternion, face.scale);
+        } else if ((face as any).originalPosition) {
+          face.position.copy((face as any).originalPosition);
+          face.quaternion.copy((face as any).originalRotation);
+        }
+      });
     });
-  });
 
-  return (
-    <div className="relative w-screen h-screen bg-gray-100">
-      <Canvas
-        camera={{ position: [0, 0, 5], fov: 50 }}
-        onCreated={({ camera }) => (cameraRef.current = camera as THREE.PerspectiveCamera)}
-      >
+    return (
+      <>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} />
         <group ref={groupRef}>
@@ -251,6 +248,19 @@ export default function SmoothCube() {
           ))}
         </group>
         <OrbitControls enableZoom={false} enablePan={false} />
+      </>
+    );
+  };
+
+  return (
+    <div className="relative w-screen h-screen bg-gray-100">
+      <Canvas
+        camera={{ position: [0, 0, 5], fov: 50 }}
+        onCreated={({ camera }) =>
+          (cameraRef.current = camera as THREE.PerspectiveCamera)
+        }
+      >
+        <Scene />
       </Canvas>
       <ControlPanel
         simpleNext={simpleNext}
