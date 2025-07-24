@@ -19,17 +19,29 @@ A modular, interactive 3D navigation interface built using **Three.js** and **Re
 
 ---
 
-<!-- ## 🖼 Demo
+## 🛠 Usage
 
-https://user-your-demo-url-if-applicable.com
-
----
-
-## 🛠 Installation
+Install dependencies and run the dev server:
 
 ```bash
-git clone https://github.com/your-username/3d-cube-navigator.git
-cd 3d-cube-navigator
-pnpm install # or npm install
-pnpm dev     # or npm run dev
- -->
+npm install
+npm run dev
+```
+
+`SmoothCube` accepts an array of six face configurations:
+
+```tsx
+import SmoothCube, { defaultFaces } from "@/components/SmoothCube";
+
+const faces = defaultFaces.map((f, i) => ({
+  ...f,
+  content: <div className="p-4">Face {i + 1}</div>,
+}));
+
+export default function Page() {
+  return <SmoothCube faces={faces} />;
+}
+```
+
+Each face can render any React node and will rotate smoothly using simple or
+complex navigation buttons.

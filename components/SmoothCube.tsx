@@ -4,17 +4,33 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Html, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import TWEEN from '@tweenjs/tween.js';
-import { useRef, useState, useEffect, forwardRef, useMemo } from 'react';
+import {
+  useRef,
+  useState,
+  useEffect,
+  forwardRef,
+  useMemo,
+  ReactNode,
+} from 'react';
 
 const SIZE = 2;
 
-const faceData = [
-  { position: [0, 0, 1], rotation: [0, 0, 0], label: 'Front' },
-  { position: [1, 0, 0], rotation: [0, Math.PI / 2, 0], label: 'Right' },
-  { position: [0, 0, -1], rotation: [0, Math.PI, 0], label: 'Back' },
-  { position: [-1, 0, 0], rotation: [0, -Math.PI / 2, 0], label: 'Left' },
-  { position: [0, 1, 0], rotation: [-Math.PI / 2, 0, 0], label: 'Top' },
-  { position: [0, -1, 0], rotation: [Math.PI / 2, 0, 0], label: 'Bottom' },
+export interface FaceConfig {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  /** Arbitrary React content to render on this face */
+  content?: ReactNode;
+  /** Background color of the face */
+  color?: string;
+}
+
+export const defaultFaces: FaceConfig[] = [
+  { position: [0, 0, 1], rotation: [0, 0, 0], content: 'Front' },
+  { position: [1, 0, 0], rotation: [0, Math.PI / 2, 0], content: 'Right' },
+  { position: [0, 0, -1], rotation: [0, Math.PI, 0], content: 'Back' },
+  { position: [-1, 0, 0], rotation: [0, -Math.PI / 2, 0], content: 'Left' },
+  { position: [0, 1, 0], rotation: [-Math.PI / 2, 0, 0], content: 'Top' },
+  { position: [0, -1, 0], rotation: [Math.PI / 2, 0, 0], content: 'Bottom' },
 ];
 
 const faceColors = ['#ffcccc', '#ccffcc', '#ccccff', '#ffffcc', '#ffccff', '#ccffff'];
@@ -55,13 +71,16 @@ function getUnfoldConfigs(size: number) {
   } as Record<string, { pivot: [number, number, number]; axis: [number, number, number] }>;
 }
 
-const CubeFace = forwardRef<THREE.Mesh, { position: number[]; rotation: number[]; label: string; color: string }>(
-  ({ position, rotation, label, color }, ref) => (
+const CubeFace = forwardRef<
+  THREE.Mesh,
+  { position: number[]; rotation: number[]; content?: ReactNode; color: string }
+>(
+  ({ position, rotation, content, color }, ref) => (
     <mesh position={position as any} rotation={rotation as any} ref={ref as any}>
       <planeGeometry args={[SIZE, SIZE]} />
       <meshStandardMaterial color={color} side={THREE.DoubleSide} />
       <Html center distanceFactor={1.1} wrapperClass="pointer-events-none">
-        <div className="text-black text-xl font-semibold">{label}</div>
+        <div className="text-black text-xl font-semibold">{content}</div>
       </Html>
     </mesh>
   )
@@ -104,7 +123,7 @@ function ControlPanel({
   );
 }
 
-export default function SmoothCube() {
+export default function SmoothCube({ faces = defaultFaces }: { faces?: FaceConfig[] }) {
   const groupRef = useRef<THREE.Group>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const facesRef = useRef<THREE.Mesh[]>([]);
@@ -259,13 +278,13 @@ export default function SmoothCube() {
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} />
         <group ref={groupRef}>
-          {faceData.map((data, idx) => (
+          {faces.map((data, idx) => (
             <CubeFace
               key={idx}
               position={data.position}
               rotation={data.rotation}
-              label={data.label}
-              color={faceColors[idx]}
+              content={data.content}
+              color={data.color ?? faceColors[idx]}
               ref={(el) => (facesRef.current[idx] = el!)}
             />
           ))}
