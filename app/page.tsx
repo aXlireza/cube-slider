@@ -1,6 +1,6 @@
-"use client"
-import CubeExperiment from '@/components/CubeScene';
+"use client";
+import SmoothCube from '@/components/SmoothCube';
 
 export default function CubePage() {
-  return <CubeExperiment />;
+  return <SmoothCube />;
 }
