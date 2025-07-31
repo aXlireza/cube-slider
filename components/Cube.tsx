@@ -1,6 +1,12 @@
 'use client';
 
-import { forwardRef, useImperativeHandle, useRef } from 'react';
+import {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useEffect,
+} from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -8,7 +14,7 @@ import TWEEN from '@tweenjs/tween.js';
 
 export type FaceName = 'front' | 'right' | 'back' | 'left' | 'top' | 'bottom';
 
-interface FaceConfig {
+export interface FaceConfig {
   color?: string;
   content?: React.ReactNode;
 }
@@ -25,6 +31,7 @@ export interface CubeHandle {
   unfold: (dir: 'right' | 'bottom') => void;
   fold: (dir: 'right' | 'bottom') => void;
   undo: () => void;
+  setFaceContent: (face: FaceName, config: FaceConfig) => void;
 }
 
 interface FaceMesh extends THREE.Mesh {
@@ -89,6 +96,10 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   const groupRef = useRef<THREE.Group>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const facesRef = useRef<FaceMesh[]>([]);
+  const [faceConfigs, setFaceConfigs] = useState<
+    Partial<Record<FaceName, FaceConfig>
+  >>(faces);
+  useEffect(() => setFaceConfigs(faces), [faces]);
   const currentFaceRef = useRef<FaceName>('front');
   const historyRef = useRef<FaceName[]>(['front']);
   const animating = useRef(false);
@@ -174,6 +185,11 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     const orig = face.userData.originalMatrix;
     const pivot = new THREE.Vector3(...config.pivot);
     const axis = new THREE.Vector3(...config.axis).normalize();
+    const baseNormal = new THREE.Vector3(...faceInfo[base].position);
+    const adjNormal = new THREE.Vector3(...faceInfo[adj].position);
+    const plus = adjNormal.clone().applyAxisAngle(axis, Math.PI / 2);
+    const minus = adjNormal.clone().applyAxisAngle(axis, -Math.PI / 2);
+    const dirSign = plus.dot(baseNormal) > minus.dot(baseNormal) ? 1 : -1;
     const start = unfoldProgress.current[adj];
     const end = open ? 1 : 0;
 
@@ -183,7 +199,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
       .easing(TWEEN.Easing.Quadratic.InOut)
       .onUpdate(({ progress }) => {
         unfoldProgress.current[adj] = progress;
-        const angle = -(Math.PI / 2) * progress;
+        const angle = dirSign * (Math.PI / 2) * progress;
         const R = new THREE.Matrix4().makeRotationAxis(axis, angle);
         const T = new THREE.Matrix4().makeTranslation(pivot.x, pivot.y, pivot.z);
         const Ti = new THREE.Matrix4().makeTranslation(-pivot.x, -pivot.y, -pivot.z);
@@ -210,6 +226,11 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     unfold: (d) => setFoldState(d, true),
     fold: (d) => setFoldState(d, false),
     undo,
+    setFaceContent: (face, cfg) =>
+      setFaceConfigs((prev) => ({
+        ...prev,
+        [face]: { ...prev[face], ...cfg },
+      })),
   }));
 
   return (
@@ -240,10 +261,12 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
             >
               <planeGeometry args={[2, 2]} />
               <meshBasicMaterial
-                color={faces[name]?.color || '#ccc'}
+                color={faceConfigs[name]?.color || '#ccc'}
                 side={THREE.DoubleSide}
               />
-              {faces[name]?.content && <Html center>{faces[name]?.content}</Html>}
+              {faceConfigs[name]?.content && (
+                <Html center>{faceConfigs[name]?.content}</Html>
+              )}
             </mesh>
           ))}
         </group>

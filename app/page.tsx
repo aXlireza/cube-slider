@@ -67,6 +67,16 @@ export default function CubePage() {
         >
           Fold Bottom
         </button>
+        <button
+          className="px-2 py-1 bg-purple-600 text-white rounded"
+          onClick={() =>
+            cubeRef.current?.setFaceContent("right", {
+              content: <div>Loaded at {new Date().toLocaleTimeString()}</div>,
+            })
+          }
+        >
+          Load Right Content
+        </button>
       </div>
       <div className="flex flex-col gap-2 w-64">
         <label className="flex items-center gap-2">
