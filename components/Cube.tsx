@@ -17,12 +17,14 @@ interface CubeProps {
   faces?: Partial<Record<FaceName, FaceConfig>>;
   zoomIdle?: number;
   zoomActive?: number;
+  speed?: number; // animation speed multiplier
 }
 
 export interface CubeHandle {
   rotateToFace: (face: FaceName) => void;
   unfold: (dir: 'right' | 'bottom') => void;
   fold: (dir: 'right' | 'bottom') => void;
+  undo: () => void;
 }
 
 interface FaceMesh extends THREE.Mesh {
@@ -81,13 +83,14 @@ function TweenUpdater() {
 }
 
 const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
-  { faces = {}, zoomIdle = 5, zoomActive = 7 },
+  { faces = {}, zoomIdle = 5, zoomActive = 7, speed = 1 },
   ref,
 ) {
   const groupRef = useRef<THREE.Group>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   const facesRef = useRef<FaceMesh[]>([]);
   const currentFaceRef = useRef<FaceName>('front');
+  const historyRef = useRef<FaceName[]>(['front']);
   const animating = useRef(false);
   const unfoldProgress = useRef<Record<FaceName, number>>({
     front: 0,
@@ -119,8 +122,8 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     });
   };
 
-  const rotateToFace = (face: FaceName) => {
-    if (animating.current) return;
+  const rotateToFace = (face: FaceName, record = true) => {
+    if (animating.current || currentFaceRef.current === face) return;
     animating.current = true;
     resetUnfolds();
     const group = groupRef.current!;
@@ -130,22 +133,25 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
       new THREE.Euler(...targetRotations[face]),
     );
 
+    const spd = Math.max(speed, 0.01);
+
     new TWEEN.Tween(camera.position)
-      .to({ z: zoomActive }, 300)
+      .to({ z: zoomActive }, 300 / spd)
       .easing(TWEEN.Easing.Quadratic.InOut)
       .onComplete(() => {
         new TWEEN.Tween({ t: 0 })
-          .to({ t: 1 }, 700)
+          .to({ t: 1 }, 700 / spd)
           .easing(TWEEN.Easing.Quadratic.InOut)
           .onUpdate(({ t }) => {
             group.quaternion.slerpQuaternions(startQuat, endQuat, t);
           })
           .onComplete(() => {
             new TWEEN.Tween(camera.position)
-              .to({ z: zoomIdle }, 300)
+              .to({ z: zoomIdle }, 300 / spd)
               .easing(TWEEN.Easing.Quadratic.InOut)
               .onComplete(() => {
                 currentFaceRef.current = face;
+                if (record) historyRef.current.push(face);
                 animating.current = false;
               })
               .start();
@@ -171,12 +177,13 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     const start = unfoldProgress.current[adj];
     const end = open ? 1 : 0;
 
+    const spd = Math.max(speed, 0.01);
     new TWEEN.Tween({ progress: start })
-      .to({ progress: end }, 600)
+      .to({ progress: end }, 600 / spd)
       .easing(TWEEN.Easing.Quadratic.InOut)
       .onUpdate(({ progress }) => {
         unfoldProgress.current[adj] = progress;
-        const angle = (Math.PI / 2) * progress;
+        const angle = -(Math.PI / 2) * progress;
         const R = new THREE.Matrix4().makeRotationAxis(axis, angle);
         const T = new THREE.Matrix4().makeTranslation(pivot.x, pivot.y, pivot.z);
         const Ti = new THREE.Matrix4().makeTranslation(-pivot.x, -pivot.y, -pivot.z);
@@ -189,10 +196,20 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
       .start();
   };
 
+  const undo = () => {
+    if (animating.current) return;
+    const history = historyRef.current;
+    if (history.length <= 1) return;
+    history.pop();
+    const prev = history[history.length - 1];
+    rotateToFace(prev, false);
+  };
+
   useImperativeHandle(ref, () => ({
     rotateToFace,
     unfold: (d) => setFoldState(d, true),
     fold: (d) => setFoldState(d, false),
+    undo,
   }));
 
   return (
