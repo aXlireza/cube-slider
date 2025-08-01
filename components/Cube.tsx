@@ -29,11 +29,12 @@ interface CubeProps {
 }
 
 export interface CubeHandle {
-  rotateToFace: (face: FaceName) => void;
+  rotateToFace: (face: FaceName) => Promise<void>;
   unfold: (dir: 'right' | 'bottom') => void;
   fold: (dir: 'right' | 'bottom') => void;
   undo: () => void;
   setFaceContent: (face: FaceName, config: FaceConfig) => void;
+  getCurrentFace: () => FaceName;
 }
 
 interface FaceMesh extends THREE.Mesh {
@@ -166,44 +167,49 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     });
   };
 
-  const rotateToFace = (face: FaceName, record = true) => {
-    if (animating.current || currentFaceRef.current === face) return;
-    animating.current = true;
-    resetUnfolds();
-    const group = groupRef.current!;
-    const camera = cameraRef.current!;
-    const startQuat = group.quaternion.clone();
-    const endQuat = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(...targetRotations[face]),
-    );
+  const rotateToFace = (face: FaceName, record = true) =>
+    new Promise<void>((resolve) => {
+      if (animating.current || currentFaceRef.current === face) {
+        resolve();
+        return;
+      }
+      animating.current = true;
+      resetUnfolds();
+      const group = groupRef.current!;
+      const camera = cameraRef.current!;
+      const startQuat = group.quaternion.clone();
+      const endQuat = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(...targetRotations[face]),
+      );
 
-    const spd = Math.max(speed, 0.01);
+      const spd = Math.max(speed, 0.01);
 
-    new TWEEN.Tween(camera.position)
-      .to({ z: zoomActive }, 300 / spd)
-      .easing(TWEEN.Easing.Quadratic.InOut)
-      .onComplete(() => {
-        new TWEEN.Tween({ t: 0 })
-          .to({ t: 1 }, 700 / spd)
-          .easing(TWEEN.Easing.Quadratic.InOut)
-          .onUpdate(({ t }) => {
-            group.quaternion.slerpQuaternions(startQuat, endQuat, t);
-          })
-          .onComplete(() => {
-            new TWEEN.Tween(camera.position)
-              .to({ z: zoomIdle }, 300 / spd)
-              .easing(TWEEN.Easing.Quadratic.InOut)
-              .onComplete(() => {
-                currentFaceRef.current = face;
-                if (record) historyRef.current.push(face);
-                animating.current = false;
-              })
-              .start();
-          })
-          .start();
-      })
-      .start();
-  };
+      new TWEEN.Tween(camera.position)
+        .to({ z: zoomActive }, 300 / spd)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .onComplete(() => {
+          new TWEEN.Tween({ t: 0 })
+            .to({ t: 1 }, 700 / spd)
+            .easing(TWEEN.Easing.Quadratic.InOut)
+            .onUpdate(({ t }) => {
+              group.quaternion.slerpQuaternions(startQuat, endQuat, t);
+            })
+            .onComplete(() => {
+              new TWEEN.Tween(camera.position)
+                .to({ z: zoomIdle }, 300 / spd)
+                .easing(TWEEN.Easing.Quadratic.InOut)
+                .onComplete(() => {
+                  currentFaceRef.current = face;
+                  if (record) historyRef.current.push(face);
+                  animating.current = false;
+                  resolve();
+                })
+                .start();
+            })
+            .start();
+        })
+        .start();
+    });
 
   const setFoldState = (dir: 'right' | 'bottom', open: boolean) => {
     if (animating.current) return;
@@ -251,7 +257,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     if (history.length <= 1) return;
     history.pop();
     const prev = history[history.length - 1];
-    rotateToFace(prev, false);
+    void rotateToFace(prev, false);
   };
 
   useImperativeHandle(ref, () => ({
@@ -264,6 +270,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
         ...prev,
         [face]: { ...prev[face], ...cfg },
       })),
+    getCurrentFace: () => currentFaceRef.current,
   }));
 
   return (

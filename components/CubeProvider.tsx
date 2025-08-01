@@ -55,7 +55,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
               <button
                 key={f}
                 className="px-2 py-1 bg-gray-800 text-white rounded"
-                onClick={() => cubeRef.current?.rotateToFace(f)}
+                onClick={() => void cubeRef.current?.rotateToFace(f)}
               >
                 {`Face ${f}`}
               </button>
