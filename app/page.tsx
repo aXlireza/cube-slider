@@ -8,6 +8,9 @@ export default function CubePage() {
   const [zoomOut, setZoomOut] = useState(7);
   const [zoomIn, setZoomIn] = useState(5);
   const [speed, setSpeed] = useState(1);
+  const [posX, setPosX] = useState(0);
+  const [posY, setPosY] = useState(0);
+  const [cubeScale, setCubeScale] = useState(1);
 
   return (
     <div className="h-screen flex flex-col items-center justify-center gap-4">
@@ -16,6 +19,8 @@ export default function CubePage() {
         zoomActive={zoomOut}
         zoomIdle={zoomIn}
         speed={speed}
+        position={[posX, posY]}
+        scale={cubeScale}
         faces={{
           front: { color: "#ff8a80", content: <div>Front</div> },
           back: { color: "#80d8ff", content: <div>Back</div> },
@@ -110,6 +115,39 @@ export default function CubePage() {
             step={0.1}
             value={speed}
             onChange={(e) => setSpeed(parseFloat(e.target.value))}
+          />
+        </label>
+        <label className="flex items-center gap-2">
+          <span className="w-32">Pos X</span>
+          <input
+            type="range"
+            min={-5}
+            max={5}
+            step={0.1}
+            value={posX}
+            onChange={(e) => setPosX(parseFloat(e.target.value))}
+          />
+        </label>
+        <label className="flex items-center gap-2">
+          <span className="w-32">Pos Y</span>
+          <input
+            type="range"
+            min={-5}
+            max={5}
+            step={0.1}
+            value={posY}
+            onChange={(e) => setPosY(parseFloat(e.target.value))}
+          />
+        </label>
+        <label className="flex items-center gap-2">
+          <span className="w-32">Scale</span>
+          <input
+            type="range"
+            min={0.5}
+            max={2}
+            step={0.1}
+            value={cubeScale}
+            onChange={(e) => setCubeScale(parseFloat(e.target.value))}
           />
         </label>
       </div>

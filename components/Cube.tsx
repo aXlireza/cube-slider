@@ -24,6 +24,8 @@ interface CubeProps {
   zoomIdle?: number;
   zoomActive?: number;
   speed?: number; // animation speed multiplier
+  position?: [number, number];
+  scale?: number;
 }
 
 export interface CubeHandle {
@@ -90,7 +92,14 @@ function TweenUpdater() {
 }
 
 const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
-  { faces = {}, zoomIdle = 5, zoomActive = 7, speed = 1 },
+  {
+    faces = {},
+    zoomIdle = 5,
+    zoomActive = 7,
+    speed = 1,
+    position = [0, 0],
+    scale = 1,
+  },
   ref,
 ) {
   const groupRef = useRef<THREE.Group>(null);
@@ -111,6 +120,20 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     top: 0,
     bottom: 0,
   });
+
+  const [posXVal, posYVal] = position;
+
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(posXVal, posYVal, 0);
+    }
+  }, [posXVal, posYVal]);
+
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.scale.set(scale, scale, scale);
+    }
+  }, [scale]);
 
   const faceIndices: Record<FaceName, number> = {
     front: 0,
