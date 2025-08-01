@@ -267,7 +267,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   }));
 
   return (
-    <div className="w-[400px] h-[400px]">
+    <div className="size-full absolute">
       <Canvas
         camera={{ position: [0, 0, zoomIdle], fov: 50 }}
         onCreated={({ camera }) => {
