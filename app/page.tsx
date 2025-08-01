@@ -1,35 +1,25 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Cube, { CubeHandle } from "@/components/Cube";
+import { useCube } from "@/components/CubeProvider";
 
 export default function CubePage() {
-  const cubeRef = useRef<CubeHandle>(null);
-  const [zoomOut, setZoomOut] = useState(7);
-  const [zoomIn, setZoomIn] = useState(5);
-  const [speed, setSpeed] = useState(1);
-  const [posX, setPosX] = useState(0);
-  const [posY, setPosY] = useState(0);
-  const [cubeScale, setCubeScale] = useState(1);
+  const {
+    cubeRef,
+    zoomOut,
+    setZoomOut,
+    zoomIn,
+    setZoomIn,
+    speed,
+    setSpeed,
+    position,
+    setPosition,
+    scale,
+    setScale,
+  } = useCube();
+  const [posX, posY] = position;
 
   return (
     <div className="h-screen flex flex-col items-center justify-center gap-4">
-      <Cube
-        ref={cubeRef}
-        zoomActive={zoomOut}
-        zoomIdle={zoomIn}
-        speed={speed}
-        position={[posX, posY]}
-        scale={cubeScale}
-        faces={{
-          front: { color: "#ff8a80", content: <div>Front</div> },
-          back: { color: "#80d8ff", content: <div>Back</div> },
-          right: { color: "#ccff90", content: <div>Right</div> },
-          left: { color: "#ffd180", content: <div>Left</div> },
-          top: { color: "#b388ff", content: <div>Top</div> },
-          bottom: { color: "#ffff8d", content: <div>Bottom</div> },
-        }}
-      />
       <div className="flex flex-wrap justify-center gap-2">
         {(["front", "right", "back", "left", "top", "bottom"] as const).map((f) => (
           <button
@@ -125,7 +115,7 @@ export default function CubePage() {
             max={5}
             step={0.1}
             value={posX}
-            onChange={(e) => setPosX(parseFloat(e.target.value))}
+            onChange={(e) => setPosition([parseFloat(e.target.value), posY])}
           />
         </label>
         <label className="flex items-center gap-2">
@@ -136,7 +126,7 @@ export default function CubePage() {
             max={5}
             step={0.1}
             value={posY}
-            onChange={(e) => setPosY(parseFloat(e.target.value))}
+            onChange={(e) => setPosition([posX, parseFloat(e.target.value)])}
           />
         </label>
         <label className="flex items-center gap-2">
@@ -146,8 +136,8 @@ export default function CubePage() {
             min={0.5}
             max={2}
             step={0.1}
-            value={cubeScale}
-            onChange={(e) => setCubeScale(parseFloat(e.target.value))}
+            value={scale}
+            onChange={(e) => setScale(parseFloat(e.target.value))}
           />
         </label>
       </div>
