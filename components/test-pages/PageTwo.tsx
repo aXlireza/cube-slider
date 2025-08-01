@@ -2,23 +2,24 @@
 
 import { useCubeNavigation } from "@/components/useCubeNavigation";
 
-export default function Home() {
+export default function PageTwo() {
   const navigate = useCubeNavigation();
 
   return (
-    <main className="p-4">
+    <div className="p-4 text-center">
+      <h1 className="text-2xl mb-4">Test Page Two</h1>
       <button
         className="px-4 py-2 bg-gray-800 text-white rounded"
         onClick={() =>
           navigate(async () => {
             await new Promise((r) => setTimeout(r, 1000));
-            const mod = await import("@/components/test-pages/PageOne");
+            const mod = await import("./PageThree");
             return <mod.default />;
           })
         }
       >
-        Go to Page One
+        Go to Page Three
       </button>
-    </main>
+    </div>
   );
 }
