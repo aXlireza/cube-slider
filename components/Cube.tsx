@@ -124,16 +124,26 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   const [posXVal, posYVal] = position;
 
   useEffect(() => {
-    if (groupRef.current) {
-      groupRef.current.position.set(posXVal, posYVal, 0);
-    }
-  }, [posXVal, posYVal]);
+    const group = groupRef.current;
+    if (!group) return;
+    const spd = Math.max(speed, 0.01);
+    new TWEEN.Tween(group.position)
+      .to({ x: posXVal, y: posYVal, z: 0 }, 600 / spd)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .start();
+  }, [posXVal, posYVal, speed]);
 
   useEffect(() => {
-    if (groupRef.current) {
-      groupRef.current.scale.set(scale, scale, scale);
-    }
-  }, [scale]);
+    const group = groupRef.current;
+    if (!group) return;
+    const spd = Math.max(speed, 0.01);
+    const start = { s: group.scale.x };
+    new TWEEN.Tween(start)
+      .to({ s: scale }, 600 / spd)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .onUpdate(({ s }) => group.scale.set(s, s, s))
+      .start();
+  }, [scale, speed]);
 
   const faceIndices: Record<FaceName, number> = {
     front: 0,
@@ -271,7 +281,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
             <mesh
               key={name}
               ref={(el) => {
-                if (el) {
+                if (el && !facesRef.current[idx]) {
                   const faceMesh = el as FaceMesh;
                   facesRef.current[idx] = faceMesh;
                   faceMesh.matrixAutoUpdate = false;
