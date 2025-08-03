@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CubeProvider, CubeCanvas } from "@/components/CubeProvider";
-import PageSlot from "@/components/PageSlot";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -18,7 +17,7 @@ export default function RootLayout({
       <body className="antialiased">
         <CubeProvider>
           <CubeCanvas />
-          <PageSlot>{children}</PageSlot>
+          {children}
         </CubeProvider>
       </body>
     </html>

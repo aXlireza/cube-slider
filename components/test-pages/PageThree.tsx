@@ -1,11 +1,12 @@
 "use client";
 
+import CubePage from '@/components/CubePage';
 import { useCubeNavigation } from "@/components/useCubeNavigation";
 
 export default function PageThree() {
   const navigate = useCubeNavigation();
 
-  return (
+  const content = (
     <div className="p-4 text-center">
       <h1 className="text-2xl mb-4">Test Page Three</h1>
       <button
@@ -21,5 +22,12 @@ export default function PageThree() {
         Back to Page One
       </button>
     </div>
+  );
+
+  return (
+    <>
+      <CubePage>{content}</CubePage>
+      {content}
+    </>
   );
 }

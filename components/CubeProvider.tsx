@@ -20,7 +20,7 @@ interface CubeContextValue {
 const CubeContext = createContext<CubeContextValue | undefined>(undefined);
 
 export function CubeProvider({ children }: { children: React.ReactNode }) {
-  const cubeRef = useRef<CubeHandle>(null);
+  const cubeRef = useRef<CubeHandle>(null!);
   const [zoomOut, setZoomOut] = useState(7);
   const [zoomIn, setZoomIn] = useState(5);
   const [speed, setSpeed] = useState(1);
