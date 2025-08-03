@@ -1,4 +1,5 @@
 "use client";
+import CubeScene from '@/components/CubeScene';
 
 import { useCubeNavigation } from "@/components/useCubeNavigation";
 
@@ -22,4 +23,3 @@ export default function Home() {
       </button>
     </main>
   );
-}
