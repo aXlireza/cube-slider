@@ -29,7 +29,7 @@ interface CubeProps {
 }
 
 export interface CubeHandle {
-  rotateToFace: (face: FaceName) => Promise<void>;
+  rotateToFace: (face: FaceName, final?: boolean) => Promise<void>;
   unfold: (dir: 'right' | 'bottom') => void;
   fold: (dir: 'right' | 'bottom') => void;
   undo: () => void;
@@ -167,14 +167,16 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     });
   };
 
-  const rotateToFace = (face: FaceName, record = true) =>
+  const rotateToFace = (face: FaceName, final = true, record = true) =>
     new Promise<void>((resolve) => {
       if (animating.current || currentFaceRef.current === face) {
         resolve();
         return;
       }
+
       animating.current = true;
       resetUnfolds();
+
       const group = groupRef.current!;
       const camera = cameraRef.current!;
       const startQuat = group.quaternion.clone();
@@ -195,21 +197,28 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
               group.quaternion.slerpQuaternions(startQuat, endQuat, t);
             })
             .onComplete(() => {
-              new TWEEN.Tween(camera.position)
-                .to({ z: zoomIdle }, 300 / spd)
-                .easing(TWEEN.Easing.Quadratic.InOut)
-                .onComplete(() => {
-                  currentFaceRef.current = face;
-                  if (record) historyRef.current.push(face);
-                  animating.current = false;
-                  resolve();
-                })
-                .start();
+              const finish = () => {
+                currentFaceRef.current = face;
+                if (record) historyRef.current.push(face);
+                animating.current = false;
+                resolve();
+              };
+
+              if (final) {
+                new TWEEN.Tween(camera.position)
+                  .to({ z: zoomIdle }, 300 / spd)
+                  .easing(TWEEN.Easing.Quadratic.InOut)
+                  .onComplete(finish)
+                  .start();
+              } else {
+                finish();
+              }
             })
             .start();
         })
         .start();
     });
+
 
   const setFoldState = (dir: 'right' | 'bottom', open: boolean) => {
     if (animating.current) return;

@@ -11,9 +11,10 @@ export default function Home() {
         className="px-4 py-2 bg-gray-800 text-white rounded"
         onClick={() =>
           navigate(async () => {
-            await new Promise((r) => setTimeout(r, 1000));
-            const mod = await import("@/components/test-pages/PageOne");
-            return <mod.default />;
+            // await new Promise((r) => setTimeout(r, 1000));
+            // const mod = await import("@/components/test-pages/PageOne");
+            // return <mod.default />;
+            return <>sasho</>
           })
         }
       >

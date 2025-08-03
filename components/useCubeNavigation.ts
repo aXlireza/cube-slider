@@ -33,7 +33,7 @@ export function useCubeNavigation() {
     while (!loaded) {
       const next = randomFace(current);
       current = next;
-      await cube.rotateToFace(next);
+      await cube.rotateToFace(next, false);
     }
 
     const finalFace = randomFace(current);

@@ -13,5 +13,5 @@ export default function PageSlot({ children }: { children: ReactNode }) {
     void cube.rotateToFace('front');
   }, [cubeRef, children]);
 
-  return <div style={{ display: 'none' }}>{children}</div>;
+  return <div className='z-50 relative'>{children}</div>;
 }
