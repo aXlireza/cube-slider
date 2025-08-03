@@ -55,7 +55,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
               <button
                 key={f}
                 className="px-2 py-1 bg-gray-800 text-white rounded"
-                onClick={() => cubeRef.current?.rotateToFace(f)}
+                onClick={() => void cubeRef.current?.rotateToFace(f)}
               >
                 {`Face ${f}`}
               </button>
@@ -101,6 +101,16 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
               }
             >
               Load Right Content
+            </button>
+            <button
+              className="px-2 py-1 bg-purple-600 text-white rounded"
+              onClick={() =>
+                cubeRef.current?.setFaceContent("front", {
+                  content: <div>Loaded at {new Date().toLocaleTimeString()}</div>,
+                })
+              }
+            >
+              Load front Content
             </button>
           </div>
           <div className="flex flex-col gap-2 w-64">
