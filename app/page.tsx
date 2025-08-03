@@ -1,7 +1,7 @@
 'use client';
 
 import CubePage from '@/components/CubePage';
-import Link from 'next/link';
+import CubeLink from '@/components/CubeLink';
 
 export default function Home() {
   const faceContent = (
@@ -15,12 +15,12 @@ export default function Home() {
     <>
       <CubePage>{faceContent}</CubePage>
       <div className="p-4">
-        <Link
+        <CubeLink
           href="/test1"
           className="px-4 py-2 bg-gray-800 text-white rounded"
         >
           Go to Test Page One
-        </Link>
+        </CubeLink>
       </div>
     </>
   );

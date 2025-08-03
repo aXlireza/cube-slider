@@ -18,15 +18,17 @@ function randomFace(exclude: FaceName): FaceName {
 export function useCubeNavigation() {
   const { cubeRef } = useCube();
 
-  return async function navigate(loader: () => Promise<ReactNode>) {
+  return async function navigate(loader: () => Promise<ReactNode | void>) {
     const cube = cubeRef.current;
     if (!cube) return;
 
     let current = cube.getCurrentFace();
     let loaded = false;
-    let content: ReactNode = null;
+    let content: ReactNode | undefined;
     loader().then((c) => {
-      content = c;
+      if (c !== undefined) {
+        content = c;
+      }
       loaded = true;
     });
 
@@ -36,8 +38,10 @@ export function useCubeNavigation() {
       await cube.rotateToFace(next, false);
     }
 
-    const finalFace = randomFace(current);
-    cube.setFaceContent(finalFace, { content });
-    await cube.rotateToFace(finalFace);
+    if (content !== undefined) {
+      const finalFace = randomFace(current);
+      cube.setFaceContent(finalFace, { content });
+      await cube.rotateToFace(finalFace);
+    }
   };
 }
