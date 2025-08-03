@@ -29,7 +29,7 @@ interface CubeProps {
 }
 
 export interface CubeHandle {
-  rotateToFace: (face: FaceName, final?: boolean) => Promise<void>;
+  rotateToFace: (face: FaceName, final?: boolean, record?: boolean) => Promise<void>;
   unfold: (dir: 'right' | 'bottom') => void;
   fold: (dir: 'right' | 'bottom') => void;
   undo: () => void;
@@ -266,7 +266,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     if (history.length <= 1) return;
     history.pop();
     const prev = history[history.length - 1];
-    void rotateToFace(prev, false);
+    void rotateToFace(prev, true, false);
   };
 
   useImperativeHandle(ref, () => ({
