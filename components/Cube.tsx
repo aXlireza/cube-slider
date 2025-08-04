@@ -318,7 +318,9 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
                   side={THREE.DoubleSide}
                 />
                 {faceConfigs[name]?.content && (
-                  <Html center>{faceConfigs[name]?.content}</Html>
+                  <Html center>
+                    <ContextBridge>{faceConfigs[name]?.content}</ContextBridge>
+                  </Html>
                 )}
               </mesh>
             ))}
