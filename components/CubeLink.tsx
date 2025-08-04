@@ -1,13 +1,25 @@
-'use client';
+"use client";
 
-import { useRouter as useNextRouter } from 'next/navigation';
-import { ReactNode, MouseEvent } from 'react';
-import { useCubeNavigation } from './useCubeNavigation';
+import React, { ReactNode, MouseEvent } from "react";
+import { useRouter as useNextRouter } from "next/navigation";
+import { useCubeNavigation } from "./useCubeNavigation";
+import { useOptionalCube } from "./CubeProvider";
 
-const loaders: Record<string, () => Promise<unknown>> = {
-  '/test1': () => import('@/components/test-pages/PageOne'),
-  '/test2': () => import('@/components/test-pages/PageTwo'),
-  '/test3': () => import('@/components/test-pages/PageThree'),
+const loaders: Record<string, () => Promise<ReactNode>> = {
+  "/test1": async () => {
+    const { PageOneContent } = await import("@/components/test-pages/PageOne");
+    return <PageOneContent />;
+  },
+  "/test2": async () => {
+    const { PageTwoContent } = await import("@/components/test-pages/PageTwo");
+    return <PageTwoContent />;
+  },
+  "/test3": async () => {
+    const { PageThreeContent } = await import(
+      "@/components/test-pages/PageThree",
+    );
+    return <PageThreeContent />;
+  },
 };
 
 interface CubeLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -23,22 +35,31 @@ function useOptionalRouter() {
   }
 }
 
-export default function CubeLink({ href, children, onClick, ...rest }: CubeLinkProps) {
+export default function CubeLink({
+  href,
+  children,
+  onClick,
+  ...rest
+  }: CubeLinkProps) {
   const navigate = useCubeNavigation();
-  const router = useOptionalRouter();
+  const cube = useOptionalCube();
+  const nextRouter = useOptionalRouter();
+  const router = cube?.router ?? nextRouter;
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     if (onClick) onClick(e);
+    cube?.setSuppressCubePage(true);
     const load = loaders[href];
     void navigate(async () => {
       if (load) {
-        await load();
+        return await load();
       }
+    }).then(() => {
       if (router) {
         router.push(href);
       } else {
-        window.location.href = href;
+        window.history.pushState({}, "", href);
       }
     });
   };

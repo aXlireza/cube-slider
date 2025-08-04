@@ -20,6 +20,10 @@ export default function CubePage({ children, face = 'front' }: CubePageProps) {
   useEffect(() => {
     const ref = cube?.cubeRef.current;
     if (!ref) return;
+    if (cube?.suppressCubePage) {
+      cube.setSuppressCubePage(false);
+      return;
+    }
     ref.setFaceContent(face, { content: children });
     void ref.rotateToFace(face);
   }, [cube, children, face]);

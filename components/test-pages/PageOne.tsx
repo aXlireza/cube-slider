@@ -3,7 +3,7 @@
 import CubePage from '@/components/CubePage';
 import CubeLink from '@/components/CubeLink';
 
-function PageOneContent() {
+export function PageOneContent() {
   return (
     <div className="p-4 text-center">
       <h1 className="text-2xl mb-4">Test Page One</h1>

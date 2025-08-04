@@ -8,7 +8,8 @@ import {
   useEffect,
 } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Html, useContextBridge } from '@react-three/drei';
+import { CubeContext } from './CubeProvider';
 import * as THREE from 'three';
 import TWEEN from '@tweenjs/tween.js';
 
@@ -111,6 +112,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   >>(faces);
   useEffect(() => setFaceConfigs(faces), [faces]);
   const currentFaceRef = useRef<FaceName>('front');
+  const [currentFace, setCurrentFace] = useState<FaceName>('front');
   const historyRef = useRef<FaceName[]>(['front']);
   const animating = useRef(false);
   const unfoldProgress = useRef<Record<FaceName, number>>({
@@ -120,6 +122,14 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     left: 0,
     top: 0,
     bottom: 0,
+  });
+  const [visibleUnfolds, setVisibleUnfolds] = useState<Record<FaceName, boolean>>({
+    front: false,
+    right: false,
+    back: false,
+    left: false,
+    top: false,
+    bottom: false,
   });
 
   const [posXVal, posYVal] = position;
@@ -165,6 +175,14 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
         unfoldProgress.current[name] = 0;
       }
     });
+    setVisibleUnfolds({
+      front: false,
+      right: false,
+      back: false,
+      left: false,
+      top: false,
+      bottom: false,
+    });
   };
 
   const rotateToFace = (face: FaceName, final = true, record = true) =>
@@ -199,6 +217,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
             .onComplete(() => {
               const finish = () => {
                 currentFaceRef.current = face;
+                setCurrentFace(face);
                 if (record) historyRef.current.push(face);
                 animating.current = false;
                 resolve();
@@ -230,6 +249,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     const config = unfoldConfigs[key];
     if (!face || !config) return;
     animating.current = true;
+    setVisibleUnfolds((prev) => ({ ...prev, [adj]: open }));
     const orig = face.userData.originalMatrix;
     const pivot = new THREE.Vector3(...config.pivot);
     const axis = new THREE.Vector3(...config.axis).normalize();
@@ -282,6 +302,10 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     getCurrentFace: () => currentFaceRef.current,
   }));
 
+  const ContextBridge = useContextBridge(CubeContext);
+  const rightAdj = adjacents[currentFace].right;
+  const bottomAdj = adjacents[currentFace].bottom;
+
   return (
     <div className="size-full absolute">
       <Canvas
@@ -290,35 +314,52 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
           cameraRef.current = camera as THREE.PerspectiveCamera;
         }}
       >
-        <TweenUpdater />
-        <ambientLight intensity={0.5} />
-        <group ref={groupRef}>
-          {faceOrder.map((name, idx) => (
-            <mesh
-              key={name}
-              ref={(el) => {
-                if (el && !facesRef.current[idx]) {
-                  const faceMesh = el as FaceMesh;
-                  facesRef.current[idx] = faceMesh;
-                  faceMesh.matrixAutoUpdate = false;
-                  faceMesh.position.set(...faceInfo[name].position);
-                  faceMesh.rotation.set(...faceInfo[name].rotation);
-                  faceMesh.updateMatrix();
-                  faceMesh.userData = { originalMatrix: faceMesh.matrix.clone() };
-                }
-              }}
-            >
-              <planeGeometry args={[2, 2]} />
-              <meshBasicMaterial
-                color={faceConfigs[name]?.color || '#ccc'}
-                side={THREE.DoubleSide}
-              />
-              {faceConfigs[name]?.content && (
-                <Html center>{faceConfigs[name]?.content}</Html>
-              )}
-            </mesh>
-          ))}
-        </group>
+        <ContextBridge>
+          <TweenUpdater />
+          <ambientLight intensity={0.5} />
+          <group ref={groupRef}>
+            {faceOrder.map((name, idx) => (
+              <mesh
+                key={name}
+                ref={(el) => {
+                  if (el && !facesRef.current[idx]) {
+                    const faceMesh = el as FaceMesh;
+                    facesRef.current[idx] = faceMesh;
+                    faceMesh.matrixAutoUpdate = false;
+                    faceMesh.position.set(...faceInfo[name].position);
+                    faceMesh.rotation.set(...faceInfo[name].rotation);
+                    faceMesh.updateMatrix();
+                    faceMesh.userData = { originalMatrix: faceMesh.matrix.clone() };
+                  }
+                }}
+              >
+                <planeGeometry args={[2, 2]} />
+                <meshBasicMaterial
+                  color={faceConfigs[name]?.color || '#ccc'}
+                  side={THREE.DoubleSide}
+                />
+                {faceConfigs[name]?.content && (() => {
+                  const isVisible =
+                    name === currentFace ||
+                    (name === rightAdj && visibleUnfolds[rightAdj]) ||
+                    (name === bottomAdj && visibleUnfolds[bottomAdj]);
+                  return (
+                    <Html
+                      center
+                      style={{
+                        opacity: isVisible ? 1 : 0,
+                        transition: 'opacity 0.5s ease',
+                        pointerEvents: isVisible ? 'auto' : 'none',
+                      }}
+                    >
+                      <ContextBridge>{faceConfigs[name]?.content}</ContextBridge>
+                    </Html>
+                  );
+                })()}
+              </mesh>
+            ))}
+          </group>
+        </ContextBridge>
       </Canvas>
     </div>
   );
