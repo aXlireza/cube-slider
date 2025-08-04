@@ -3,8 +3,8 @@
 import CubePage from '@/components/CubePage';
 import CubeLink from '@/components/CubeLink';
 
-export default function PageTwo() {
-  const content = (
+function PageTwoContent() {
+  return (
     <div className="p-4 text-center">
       <h1 className="text-2xl mb-4">Test Page Two</h1>
       <CubeLink
@@ -15,11 +15,15 @@ export default function PageTwo() {
       </CubeLink>
     </div>
   );
+}
 
+export default function PageTwo() {
   return (
     <>
-      <CubePage>{content}</CubePage>
-      {content}
+      <CubePage>
+        <PageTwoContent />
+      </CubePage>
+      <PageTwoContent />
     </>
   );
 }

@@ -3,8 +3,8 @@
 import CubePage from '@/components/CubePage';
 import CubeLink from '@/components/CubeLink';
 
-export default function PageOne() {
-  const content = (
+function PageOneContent() {
+  return (
     <div className="p-4 text-center">
       <h1 className="text-2xl mb-4">Test Page One</h1>
       <CubeLink
@@ -15,11 +15,15 @@ export default function PageOne() {
       </CubeLink>
     </div>
   );
+}
 
+export default function PageOne() {
   return (
     <>
-      <CubePage>{content}</CubePage>
-      {content}
+      <CubePage>
+        <PageOneContent />
+      </CubePage>
+      <PageOneContent />
     </>
   );
 }

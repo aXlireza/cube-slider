@@ -1,5 +1,6 @@
-const config = {
-  plugins: ["@tailwindcss/postcss"],
-};
+const plugins = [];
+if (!process.env.SKIP_POSTCSS) {
+  plugins.push('@tailwindcss/postcss');
+}
 
-export default config;
+export default { plugins };
