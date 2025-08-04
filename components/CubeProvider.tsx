@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useMemo, useRef, useState } from "react";
 import Cube, { CubeHandle } from "./Cube";
+import { useRouter } from "next/navigation";
+import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
 
 interface CubeContextValue {
   cubeRef: React.RefObject<CubeHandle>;
@@ -15,9 +17,10 @@ interface CubeContextValue {
   setPosition: (p: [number, number]) => void;
   scale: number;
   setScale: (v: number) => void;
+  router: AppRouterInstance;
 }
 
-const CubeContext = createContext<CubeContextValue | undefined>(undefined);
+export const CubeContext = createContext<CubeContextValue | undefined>(undefined);
 
 export function CubeProvider({ children }: { children: React.ReactNode }) {
   const cubeRef = useRef<CubeHandle>(null!);
@@ -26,6 +29,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   const [speed, setSpeed] = useState(1);
   const [position, setPosition] = useState<[number, number]>([0, 0]);
   const [scale, setScale] = useState(1);
+  const router = useRouter();
 
   const value = useMemo(
     () => ({
@@ -40,8 +44,9 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
       setPosition,
       scale,
       setScale,
+      router,
     }),
-    [zoomOut, zoomIn, speed, position, scale],
+    [router, zoomOut, zoomIn, speed, position, scale],
   );
   const [posX, posY] = position;
 

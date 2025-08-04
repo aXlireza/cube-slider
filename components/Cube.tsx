@@ -8,7 +8,8 @@ import {
   useEffect,
 } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Html, useContextBridge } from '@react-three/drei';
+import { CubeContext } from './CubeProvider';
 import * as THREE from 'three';
 import TWEEN from '@tweenjs/tween.js';
 
@@ -282,6 +283,8 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     getCurrentFace: () => currentFaceRef.current,
   }));
 
+  const ContextBridge = useContextBridge(CubeContext);
+
   return (
     <div className="size-full absolute">
       <Canvas
@@ -290,35 +293,37 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
           cameraRef.current = camera as THREE.PerspectiveCamera;
         }}
       >
-        <TweenUpdater />
-        <ambientLight intensity={0.5} />
-        <group ref={groupRef}>
-          {faceOrder.map((name, idx) => (
-            <mesh
-              key={name}
-              ref={(el) => {
-                if (el && !facesRef.current[idx]) {
-                  const faceMesh = el as FaceMesh;
-                  facesRef.current[idx] = faceMesh;
-                  faceMesh.matrixAutoUpdate = false;
-                  faceMesh.position.set(...faceInfo[name].position);
-                  faceMesh.rotation.set(...faceInfo[name].rotation);
-                  faceMesh.updateMatrix();
-                  faceMesh.userData = { originalMatrix: faceMesh.matrix.clone() };
-                }
-              }}
-            >
-              <planeGeometry args={[2, 2]} />
-              <meshBasicMaterial
-                color={faceConfigs[name]?.color || '#ccc'}
-                side={THREE.DoubleSide}
-              />
-              {faceConfigs[name]?.content && (
-                <Html center>{faceConfigs[name]?.content}</Html>
-              )}
-            </mesh>
-          ))}
-        </group>
+        <ContextBridge>
+          <TweenUpdater />
+          <ambientLight intensity={0.5} />
+          <group ref={groupRef}>
+            {faceOrder.map((name, idx) => (
+              <mesh
+                key={name}
+                ref={(el) => {
+                  if (el && !facesRef.current[idx]) {
+                    const faceMesh = el as FaceMesh;
+                    facesRef.current[idx] = faceMesh;
+                    faceMesh.matrixAutoUpdate = false;
+                    faceMesh.position.set(...faceInfo[name].position);
+                    faceMesh.rotation.set(...faceInfo[name].rotation);
+                    faceMesh.updateMatrix();
+                    faceMesh.userData = { originalMatrix: faceMesh.matrix.clone() };
+                  }
+                }}
+              >
+                <planeGeometry args={[2, 2]} />
+                <meshBasicMaterial
+                  color={faceConfigs[name]?.color || '#ccc'}
+                  side={THREE.DoubleSide}
+                />
+                {faceConfigs[name]?.content && (
+                  <Html center>{faceConfigs[name]?.content}</Html>
+                )}
+              </mesh>
+            ))}
+          </group>
+        </ContextBridge>
       </Canvas>
     </div>
   );

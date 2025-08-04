@@ -3,6 +3,7 @@
 import React, { ReactNode, MouseEvent } from "react";
 import { useRouter as useNextRouter } from "next/navigation";
 import { useCubeNavigation } from "./useCubeNavigation";
+import { useOptionalCube } from "./CubeProvider";
 
 const loaders: Record<string, () => Promise<ReactNode>> = {
   "/test1": async () => {
@@ -39,9 +40,11 @@ export default function CubeLink({
   children,
   onClick,
   ...rest
-}: CubeLinkProps) {
+  }: CubeLinkProps) {
   const navigate = useCubeNavigation();
-  const router = useOptionalRouter();
+  const cube = useOptionalCube();
+  const nextRouter = useOptionalRouter();
+  const router = cube?.router ?? nextRouter;
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
