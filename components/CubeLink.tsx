@@ -1,13 +1,21 @@
 'use client';
 
-import { useRouter as useNextRouter } from 'next/navigation';
-import { ReactNode, MouseEvent } from 'react';
+import React, { ReactNode, MouseEvent } from 'react';
 import { useCubeNavigation } from './useCubeNavigation';
 
-const loaders: Record<string, () => Promise<unknown>> = {
-  '/test1': () => import('@/components/test-pages/PageOne'),
-  '/test2': () => import('@/components/test-pages/PageTwo'),
-  '/test3': () => import('@/components/test-pages/PageThree'),
+const loaders: Record<string, () => Promise<ReactNode>> = {
+  '/test1': async () => {
+    const { PageOneContent } = await import('@/components/test-pages/PageOne');
+    return <PageOneContent />;
+  },
+  '/test2': async () => {
+    const { PageTwoContent } = await import('@/components/test-pages/PageTwo');
+    return <PageTwoContent />;
+  },
+  '/test3': async () => {
+    const { PageThreeContent } = await import('@/components/test-pages/PageThree');
+    return <PageThreeContent />;
+  },
 };
 
 interface CubeLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -15,17 +23,8 @@ interface CubeLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   children: ReactNode;
 }
 
-function useOptionalRouter() {
-  try {
-    return useNextRouter();
-  } catch {
-    return null;
-  }
-}
-
 export default function CubeLink({ href, children, onClick, ...rest }: CubeLinkProps) {
   const navigate = useCubeNavigation();
-  const router = useOptionalRouter();
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -33,13 +32,10 @@ export default function CubeLink({ href, children, onClick, ...rest }: CubeLinkP
     const load = loaders[href];
     void navigate(async () => {
       if (load) {
-        await load();
+        return await load();
       }
-      if (router) {
-        router.push(href);
-      } else {
-        window.location.href = href;
-      }
+    }).then(() => {
+      window.history.pushState({}, '', href);
     });
   };
 
