@@ -209,8 +209,12 @@ export function CubeCanvas() {
   );
 }
 
+export function useOptionalCube() {
+  return useContext(CubeContext);
+}
+
 export function useCube() {
-  const ctx = useContext(CubeContext);
+  const ctx = useOptionalCube();
   if (!ctx) throw new Error("useCube must be used within CubeProvider");
   return ctx;
 }

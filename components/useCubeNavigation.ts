@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useCube } from "./CubeProvider";
+import { useOptionalCube } from "./CubeProvider";
 import type { FaceName } from "./Cube";
 
 const faces: FaceName[] = ["front", "right", "back", "left", "top", "bottom"];
@@ -16,13 +16,16 @@ function randomFace(exclude: FaceName): FaceName {
  * ready, it is placed on a new random face and the cube settles there.
  */
 export function useCubeNavigation() {
-  const { cubeRef } = useCube();
+  const cube = useOptionalCube();
 
   return async function navigate(loader: () => Promise<ReactNode | void>) {
-    const cube = cubeRef.current;
-    if (!cube) return;
+    const ref = cube?.cubeRef.current;
+    if (!ref) {
+      await loader();
+      return;
+    }
 
-    let current = cube.getCurrentFace();
+    let current = ref.getCurrentFace();
     let loaded = false;
     let content: ReactNode | undefined;
     loader().then((c) => {
@@ -35,13 +38,13 @@ export function useCubeNavigation() {
     while (!loaded) {
       const next = randomFace(current);
       current = next;
-      await cube.rotateToFace(next, false);
+      await ref.rotateToFace(next, false);
     }
 
     if (content !== undefined) {
       const finalFace = randomFace(current);
-      cube.setFaceContent(finalFace, { content });
-      await cube.rotateToFace(finalFace);
+      ref.setFaceContent(finalFace, { content });
+      await ref.rotateToFace(finalFace);
     }
   };
 }

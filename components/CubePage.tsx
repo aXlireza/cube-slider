@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect } from 'react';
-import { useCube } from './CubeProvider';
+import { useOptionalCube } from './CubeProvider';
 import type { FaceName } from './Cube';
 
 interface CubePageProps {
@@ -15,14 +15,14 @@ interface CubePageProps {
  * additional content outside the cube.
  */
 export default function CubePage({ children, face = 'front' }: CubePageProps) {
-  const { cubeRef } = useCube();
+  const cube = useOptionalCube();
 
   useEffect(() => {
-    const cube = cubeRef.current;
-    if (!cube) return;
-    cube.setFaceContent(face, { content: children });
-    void cube.rotateToFace(face);
-  }, [cubeRef, children, face]);
+    const ref = cube?.cubeRef.current;
+    if (!ref) return;
+    ref.setFaceContent(face, { content: children });
+    void ref.rotateToFace(face);
+  }, [cube, children, face]);
 
   return null;
 }
