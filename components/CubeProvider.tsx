@@ -18,6 +18,8 @@ interface CubeContextValue {
   scale: number;
   setScale: (v: number) => void;
   router: AppRouterInstance;
+  suppressCubePage: boolean;
+  setSuppressCubePage: (v: boolean) => void;
 }
 
 export const CubeContext = createContext<CubeContextValue | undefined>(undefined);
@@ -30,6 +32,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   const [position, setPosition] = useState<[number, number]>([0, 0]);
   const [scale, setScale] = useState(1);
   const router = useRouter();
+  const [suppressCubePage, setSuppressCubePage] = useState(false);
 
   const value = useMemo(
     () => ({
@@ -45,8 +48,10 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
       scale,
       setScale,
       router,
+      suppressCubePage,
+      setSuppressCubePage,
     }),
-    [router, zoomOut, zoomIn, speed, position, scale],
+    [router, zoomOut, zoomIn, speed, position, scale, suppressCubePage],
   );
   const [posX, posY] = position;
 

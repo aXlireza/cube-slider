@@ -49,6 +49,7 @@ export default function CubeLink({
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     if (onClick) onClick(e);
+    cube?.setSuppressCubePage(true);
     const load = loaders[href];
     void navigate(async () => {
       if (load) {

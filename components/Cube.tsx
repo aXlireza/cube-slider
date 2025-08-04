@@ -112,6 +112,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   >>(faces);
   useEffect(() => setFaceConfigs(faces), [faces]);
   const currentFaceRef = useRef<FaceName>('front');
+  const [currentFace, setCurrentFace] = useState<FaceName>('front');
   const historyRef = useRef<FaceName[]>(['front']);
   const animating = useRef(false);
   const unfoldProgress = useRef<Record<FaceName, number>>({
@@ -121,6 +122,14 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     left: 0,
     top: 0,
     bottom: 0,
+  });
+  const [visibleUnfolds, setVisibleUnfolds] = useState<Record<FaceName, boolean>>({
+    front: false,
+    right: false,
+    back: false,
+    left: false,
+    top: false,
+    bottom: false,
   });
 
   const [posXVal, posYVal] = position;
@@ -166,6 +175,14 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
         unfoldProgress.current[name] = 0;
       }
     });
+    setVisibleUnfolds({
+      front: false,
+      right: false,
+      back: false,
+      left: false,
+      top: false,
+      bottom: false,
+    });
   };
 
   const rotateToFace = (face: FaceName, final = true, record = true) =>
@@ -200,6 +217,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
             .onComplete(() => {
               const finish = () => {
                 currentFaceRef.current = face;
+                setCurrentFace(face);
                 if (record) historyRef.current.push(face);
                 animating.current = false;
                 resolve();
@@ -231,6 +249,7 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
     const config = unfoldConfigs[key];
     if (!face || !config) return;
     animating.current = true;
+    setVisibleUnfolds((prev) => ({ ...prev, [adj]: open }));
     const orig = face.userData.originalMatrix;
     const pivot = new THREE.Vector3(...config.pivot);
     const axis = new THREE.Vector3(...config.axis).normalize();
@@ -284,6 +303,8 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   }));
 
   const ContextBridge = useContextBridge(CubeContext);
+  const rightAdj = adjacents[currentFace].right;
+  const bottomAdj = adjacents[currentFace].bottom;
 
   return (
     <div className="size-full absolute">
@@ -317,11 +338,24 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
                   color={faceConfigs[name]?.color || '#ccc'}
                   side={THREE.DoubleSide}
                 />
-                {faceConfigs[name]?.content && (
-                  <Html center>
-                    <ContextBridge>{faceConfigs[name]?.content}</ContextBridge>
-                  </Html>
-                )}
+                {faceConfigs[name]?.content && (() => {
+                  const isVisible =
+                    name === currentFace ||
+                    (name === rightAdj && visibleUnfolds[rightAdj]) ||
+                    (name === bottomAdj && visibleUnfolds[bottomAdj]);
+                  return (
+                    <Html
+                      center
+                      style={{
+                        opacity: isVisible ? 1 : 0,
+                        transition: 'opacity 0.5s ease',
+                        pointerEvents: isVisible ? 'auto' : 'none',
+                      }}
+                    >
+                      <ContextBridge>{faceConfigs[name]?.content}</ContextBridge>
+                    </Html>
+                  );
+                })()}
               </mesh>
             ))}
           </group>

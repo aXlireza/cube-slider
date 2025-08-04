@@ -61,6 +61,8 @@ describe("CubeLink", () => {
       scale: 1,
       setScale: () => {},
       router: { push: pushMock },
+      suppressCubePage: false,
+      setSuppressCubePage: () => {},
     };
     const { getByText } = render(
       <CubeContext.Provider value={ctx}>
