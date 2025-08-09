@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
   useEffect,
-  useMemo,
+  // useMemo,
   useLayoutEffect,
 } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -117,8 +117,8 @@ function FaceHtmlWorld({
   faceMesh,
   visible,
   fill = 0.9,
-  minPx = 120,
-  maxPx = 900,
+  // minPx = 120,
+  // maxPx = 900,
   children,
 }: {
   faceMesh: THREE.Mesh | null;
@@ -128,6 +128,7 @@ function FaceHtmlWorld({
   maxPx?: number;
   children: React.ReactNode;
 }) {
+  // const theminmax = minPx + maxPx
   const { camera, size, viewport } = useThree();
   const [px, setPx] = useState<number | null>(null); // null = not computed yet
   const last = useRef(0);
@@ -422,8 +423,8 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   // // Html box: proportion of the square side, modulated by your `scale`
   // const htmlPx = (side * .43 * scale); // tweak 0.28 / clamps
 
-  const { ref: containerRef, size } = useElementSize<HTMLDivElement>();
-  const side = Math.min(size.width, size.height) || 0;
+  const { ref: containerRef } = useElementSize<HTMLDivElement>();
+  // const side = Math.min(size.width, size.height) || 0;
 
 
   return (
