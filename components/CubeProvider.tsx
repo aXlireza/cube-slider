@@ -3,7 +3,8 @@
 import { createContext, useContext, useMemo, useRef, useState } from "react";
 import Cube, { CubeHandle } from "./Cube";
 import { useRouter } from "next/navigation";
-import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+// import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context";
 
 interface CubeContextValue {
   cubeRef: React.RefObject<CubeHandle>;
