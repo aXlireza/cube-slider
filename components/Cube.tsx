@@ -7,7 +7,7 @@ import {
   useState,
   useEffect,
 } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, useContextBridge } from '@react-three/drei';
 import { CubeContext } from './CubeProvider';
 import * as THREE from 'three';
@@ -92,6 +92,35 @@ function TweenUpdater() {
   useFrame(() => TWEEN.update());
   return null;
 }
+
+function useElementSize<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const el = ref.current;
+
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect;
+      if (!cr) return;
+      // schedule to avoid layout thrash during rapid resizes
+      requestAnimationFrame(() =>
+        setSize({ width: cr.width, height: cr.height })
+      );
+    });
+
+    ro.observe(el);
+    // initial measure in case observer fires late
+    const rect = el.getBoundingClientRect();
+    setSize({ width: rect.width, height: rect.height });
+
+    return () => ro.disconnect();
+  }, []);
+
+  return { ref, size };
+}
+
 
 const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   {
@@ -305,9 +334,20 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   const ContextBridge = useContextBridge(CubeContext);
   const rightAdj = adjacents[currentFace].right;
   const bottomAdj = adjacents[currentFace].bottom;
+  
+  // 2) wrap Canvas in a measured container
+  const { ref: containerRef, size } = useElementSize<HTMLDivElement>();
+
+  // side of the square canvas = the smaller of width/height
+  const side = Math.min(size.width, size.height);
+  console.log(side);
+  
+  // Html box: proportion of the square side, modulated by your `scale`
+  const htmlPx = (side * .43 * scale); // tweak 0.28 / clamps
+
 
   return (
-    <div className="size-full absolute">
+    <div className="size-full absolute" ref={containerRef}>
       <Canvas
         camera={{ position: [0, 0, zoomIdle], fov: 50 }}
         onCreated={({ camera }) => {
@@ -347,6 +387,9 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
                     <Html
                       center
                       style={{
+                        backgroundColor: '#ccc7',
+                        width: `${htmlPx}px`,
+                        height: `${htmlPx}px`,
                         opacity: isVisible ? 1 : 0,
                         transition: 'opacity 0.5s ease',
                         pointerEvents: isVisible ? 'auto' : 'none',

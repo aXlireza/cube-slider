@@ -58,7 +58,7 @@ export function CubeProvider({ children }: { children: React.ReactNode }) {
   return (
     <CubeContext.Provider value={value}>
       {children}
-      <aside className="absolute bottom-0 w-full h-min">
+      <aside className="absolute bottom-0 w-full h-min z-50">
         <div className="flex flex-col items-center justify-center gap-4">
           <div className="flex flex-wrap justify-center gap-2">
             {(["front", "right", "back", "left", "top", "bottom"] as const).map((f) => (

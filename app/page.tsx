@@ -5,7 +5,7 @@ import CubeLink from '@/components/CubeLink';
 
 function HomeContent() {
   return (
-    <div className="p-4 text-center">
+    <div className="p-4 text-center size-full ">
       <h1 className="text-2xl mb-4">Home</h1>
       <p className="mb-4">Content rendered on the cube face.</p>
       <CubeLink
