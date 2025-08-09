@@ -6,6 +6,8 @@ import {
   useRef,
   useState,
   useEffect,
+  useMemo,
+  useLayoutEffect,
 } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, useContextBridge } from '@react-three/drei';
@@ -99,27 +101,102 @@ function useElementSize<T extends HTMLElement>() {
 
   useEffect(() => {
     if (!ref.current) return;
-    const el = ref.current;
-
-    const ro = new ResizeObserver((entries) => {
-      const cr = entries[0]?.contentRect;
-      if (!cr) return;
-      // schedule to avoid layout thrash during rapid resizes
-      requestAnimationFrame(() =>
-        setSize({ width: cr.width, height: cr.height })
-      );
+    const ro = new ResizeObserver(([e]) => {
+      const r = e?.contentRect; if (!r) return;
+      requestAnimationFrame(() => setSize({ width: r.width, height: r.height }));
     });
-
-    ro.observe(el);
-    // initial measure in case observer fires late
-    const rect = el.getBoundingClientRect();
-    setSize({ width: rect.width, height: rect.height });
-
+    ro.observe(ref.current);
+    const r = ref.current.getBoundingClientRect();
+    setSize({ width: r.width, height: r.height });
     return () => ro.disconnect();
   }, []);
-
   return { ref, size };
 }
+
+function FaceHtmlWorld({
+  faceMesh,
+  visible,
+  fill = 0.9,
+  minPx = 120,
+  maxPx = 900,
+  children,
+}: {
+  faceMesh: THREE.Mesh | null;
+  visible: boolean;
+  fill?: number;
+  minPx?: number;
+  maxPx?: number;
+  children: React.ReactNode;
+}) {
+  const { camera, size, viewport } = useThree();
+  const [px, setPx] = useState<number | null>(null); // null = not computed yet
+  const last = useRef(0);
+
+  const compute = () => {
+    if (!faceMesh) return;
+    // ensure world matrix is fresh
+    faceMesh.updateWorldMatrix(true, true);
+
+    const worldScale = new THREE.Vector3().setFromMatrixScale(faceMesh.matrixWorld);
+    const faceWorldW = 2 * worldScale.x; // plane 2x2
+    const faceWorldH = 2 * worldScale.y;
+
+    const worldCenter = new THREE.Vector3();
+    faceMesh.getWorldPosition(worldCenter);
+    const vp = viewport.getCurrentViewport(camera, worldCenter);
+
+    const ppuX = size.width / vp.width;
+    const ppuY = size.height / vp.height;
+
+    const facePxW = faceWorldW * ppuX;
+    const facePxH = faceWorldH * ppuY;
+    const next = Math.min(facePxW, facePxH) * fill;
+
+    if (Number.isFinite(next) && next > 0) {
+      // setPx(Math.max(minPx, Math.min(maxPx, next)));
+      setPx(next)
+    }
+  };
+
+  // 1) Do an initial compute ASAP (twice: next frame to catch layout)
+  useLayoutEffect(() => {
+    if (!faceMesh) return;
+    compute();
+    const id = requestAnimationFrame(compute);
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faceMesh, size.width, size.height, fill]);
+
+  // 2) Keep updating during animation/zoom (throttled ~20fps)
+  useFrame(() => {
+    const now = performance.now();
+    if (now - last.current < 50) return;
+    last.current = now;
+    compute();
+  });
+
+
+  // Fallback before first valid compute: 28% of canvas min-side
+  const fallbackPx = (size.width, size.height) * 0.535;
+  const finalPx = px ?? fallbackPx;
+
+  return (
+    <Html
+      center
+      style={{
+        backgroundColor: '#eee9',
+        width: `${finalPx}px`,
+        height: `${finalPx}px`,
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.25s ease',
+        pointerEvents: visible ? 'auto' : 'none',
+      }}
+    >
+      {children}
+    </Html>
+  );
+}
+
 
 
 const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
@@ -335,15 +412,18 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
   const rightAdj = adjacents[currentFace].right;
   const bottomAdj = adjacents[currentFace].bottom;
   
-  // 2) wrap Canvas in a measured container
-  const { ref: containerRef, size } = useElementSize<HTMLDivElement>();
+  // // 2) wrap Canvas in a measured container
+  // const { ref: containerRef, size } = useElementSize<HTMLDivElement>();
 
-  // side of the square canvas = the smaller of width/height
-  const side = Math.min(size.width, size.height);
-  console.log(side);
+  // // side of the square canvas = the smaller of width/height
+  // const side = Math.min(size.width, size.height);
+  // console.log(side);
   
-  // Html box: proportion of the square side, modulated by your `scale`
-  const htmlPx = (side * .43 * scale); // tweak 0.28 / clamps
+  // // Html box: proportion of the square side, modulated by your `scale`
+  // const htmlPx = (side * .43 * scale); // tweak 0.28 / clamps
+
+  const { ref: containerRef, size } = useElementSize<HTMLDivElement>();
+  const side = Math.min(size.width, size.height) || 0;
 
 
   return (
@@ -384,19 +464,27 @@ const Cube = forwardRef<CubeHandle, CubeProps>(function Cube(
                     (name === rightAdj && visibleUnfolds[rightAdj]) ||
                     (name === bottomAdj && visibleUnfolds[bottomAdj]);
                   return (
-                    <Html
-                      center
-                      style={{
-                        backgroundColor: '#ccc7',
-                        width: `${htmlPx}px`,
-                        height: `${htmlPx}px`,
-                        opacity: isVisible ? 1 : 0,
-                        transition: 'opacity 0.5s ease',
-                        pointerEvents: isVisible ? 'auto' : 'none',
-                      }}
+                    // <Html
+                    //   center
+                    //   style={{
+                    //     backgroundColor: '#ccc7',
+                    //     width: `${htmlPx}px`,
+                    //     height: `${htmlPx}px`,
+                    //     opacity: isVisible ? 1 : 0,
+                    //     transition: 'opacity 0.5s ease',
+                    //     pointerEvents: isVisible ? 'auto' : 'none',
+                    //   }}
+                    // >
+                    //   <ContextBridge>{faceConfigs[name]?.content}</ContextBridge>
+                    // </Html>
+                    <FaceHtmlWorld
+                      faceMesh={facesRef.current[idx] ?? null}
+                      visible={isVisible}
+                      fill={1}
                     >
                       <ContextBridge>{faceConfigs[name]?.content}</ContextBridge>
-                    </Html>
+                    </FaceHtmlWorld>
+
                   );
                 })()}
               </mesh>
